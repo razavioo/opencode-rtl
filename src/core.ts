@@ -443,7 +443,7 @@ function wrapMarkdownRtl(text: string, mode: IsolationMode, options: NormalizedR
           if (!subBlock.trim()) return subBlock
           const body = formatRtlTextWithoutMarkdownWrapper(subBlock, mode, options)
           if (options.wrapRtlMarkdown !== "always" && analyzeDirection(subBlock, options).direction !== "rtl") return body
-          return `<div dir="rtl">\n\n${body.trim()}\n\n</div>`
+          return `<div dir="rtl" align="right">\n\n${body.trim()}\n\n</div>`
         })
         .join("")
     })
