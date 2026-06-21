@@ -88,7 +88,7 @@ The output should contain `file:///home/razavioo/StudioProjects/opencode-rtl` in
 | `alignRtlParagraphs` | `boolean` | `false` | Terminal-only hard-wrap/padding workaround. This is not the RTL detection switch. |
 | `rtlWrapColumn` | `number` | `96` | Maximum visual width before the plugin inserts real line breaks. |
 | `rtlAlignColumn` | `number` | `96` | Visual column used for right padding. Match this to your opencode message width. |
-| `wrapRtlMarkdown` | `"off" \| "auto" \| "always"` | `"off"` | Wraps detected RTL Markdown in `<div dir="rtl" align="right">` for renderers that honor inline HTML. |
+| `wrapRtlMarkdown` | `"off" \| "auto" \| "always"` | `"off"` | Experimental output-only Markdown wrapper for renderers that honor inline HTML. Keep off for normal use. |
 | `directionEnv` | `boolean` | `true` | Exposes RTL settings to shell tools through `OPENCODE_RTL_*` env vars. |
 | `includeLanguageHint` | `boolean` | `true` | Adds an explicit language-context line to the system guidance. |
 | `notifyOnStart` | `boolean` | `false` | Shows a TUI toast when the plugin loads. Useful for setup checks. |
@@ -119,15 +119,15 @@ Use `forceDirection: "rtl"` only if you want every formatted assistant/user text
 
 ## Web Layout
 
-`opencode web` controls the outer message column in its own UI. Without changing opencode itself, the plugin can only influence rendered Markdown. Set `wrapRtlMarkdown: "auto"` to wrap each detected RTL Markdown block in an inline HTML container:
+`opencode web` controls the prompt input and outer message column in its own UI. Without changing opencode itself, the plugin can only influence text after it leaves or enters model hooks. Optionally set `wrapRtlMarkdown: "auto"` to wrap each detected RTL output paragraph in an inline HTML paragraph:
 
 ```html
-<div dir="rtl" align="right">
+<p dir="rtl" align="right">
 RTL block only
-</div>
+</p>
 ```
 
-LTR paragraphs and fenced code blocks are left unchanged. If the Web UI sanitizer or renderer strips this HTML, the remaining fix must be upstream in opencode's Web UI layout.
+LTR paragraphs and fenced code blocks are left unchanged. This option is disabled by default because inline HTML wrappers can interact poorly with some Markdown renderers. If live typing in the Ask Anything box is wrong, the fix must be upstream in opencode's Web UI prompt component.
 
 ## Terminal Alignment
 

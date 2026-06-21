@@ -267,6 +267,8 @@ export function isRtlLanguage(language: LanguageOption): language is RtlLanguage
 }
 
 function formatMarkdownLine(line: string, direction: "rtl" | "ltr", options: NormalizedRtlOptions) {
+  if (isMarkdownTableRow(line)) return formatMarkdownTableRow(line, options)
+
   const { marker, content } = splitMarkdownLine(line)
   if (!content.trim()) return line
   if (direction === "rtl" && options.alignRtlParagraphs) {
@@ -279,6 +281,33 @@ function splitMarkdownLine(line: string) {
   const prefix = line.match(/^(\s*(?:(?:[-*+] |\d+\. |#{1,6} |> )?))(.*)$/u)
   if (!prefix) return { marker: "", content: line }
   return { marker: prefix[1] ?? "", content: prefix[2] ?? "" }
+}
+
+function isMarkdownTableRow(line: string) {
+  const trimmed = line.trim()
+  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) return false
+  return trimmed.slice(1, -1).includes("|")
+}
+
+function isMarkdownTableSeparatorCell(cell: string) {
+  return /^\s*:?-{3,}:?\s*$/u.test(cell)
+}
+
+function formatMarkdownTableRow(line: string, options: NormalizedRtlOptions) {
+  const leading = line.match(/^\s*/u)?.[0] ?? ""
+  const trimmed = line.trim()
+  const cells = trimmed.slice(1, -1).split("|")
+  const formatted = cells.map((cell) => {
+    if (isMarkdownTableSeparatorCell(cell)) return cell
+    const leadingCell = cell.match(/^\s*/u)?.[0] ?? ""
+    const trailingCell = cell.match(/\s*$/u)?.[0] ?? ""
+    const content = cell.trim()
+    if (!content) return cell
+    if (analyzeDirection(content, options).direction !== "rtl") return cell
+    return `${leadingCell}${isolate(content, "rtl")}${trailingCell}`
+  })
+
+  return `${leading}|${formatted.join("|")}|`
 }
 
 function alignRtlContent(marker: string, content: string, options: NormalizedRtlOptions) {
@@ -306,13 +335,18 @@ function wrapMarkdownRtl(text: string, mode: IsolationMode, options: NormalizedR
       const body = formatRtlTextWithoutMarkdownWrapper(block.value, mode, options)
       if (options.wrapRtlMarkdown !== "always" && analyzeDirection(block.value, options).direction !== "rtl") return body
       if (!canWrapMarkdownBlock(block.value)) return body
-      return `<div dir="rtl" align="right">\n\n${body}\n\n</div>`
+      return `<p dir="rtl" align="right">${body.trim()}</p>${preserveTrailingBlankLines(body)}`
     })
     .join("")
 }
 
 function formatRtlTextWithoutMarkdownWrapper(text: string, mode: IsolationMode, options: NormalizedRtlOptions) {
   return formatRtlText(text, mode, { ...options, wrapRtlMarkdown: "off" })
+}
+
+function preserveTrailingBlankLines(text: string) {
+  const match = text.match(/(?:\r?\n)+$/u)
+  return match?.[0] ?? ""
 }
 
 type MarkdownBlock =

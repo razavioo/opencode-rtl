@@ -16,7 +16,7 @@
         "alignRtlParagraphs": false,
         "rtlWrapColumn": 96,
         "rtlAlignColumn": 96,
-        "wrapRtlMarkdown": "auto",
+        "wrapRtlMarkdown": "off",
         "notifyOnStart": false
       }
     ]
