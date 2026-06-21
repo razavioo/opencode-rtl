@@ -429,7 +429,25 @@ function alignRtlContent(marker: string, content: string, options: NormalizedRtl
 }
 
 function isolate(text: string, direction: "rtl" | "ltr") {
-  return `${direction === "rtl" ? RLI : LRI}${text}${PDI}`
+  const startControl = direction === "rtl" ? RLI : LRI
+  const leadingMatch = text.match(/^(\s*(?:\*\*|\*|__|_|~~)+)/)
+  const trailingMatch = text.match(/((?:\*\*|\*|__|_|~~)+\s*)$/)
+
+  let prefix = ""
+  let suffix = ""
+  let content = text
+
+  if (leadingMatch) {
+    prefix = leadingMatch[1]!
+    content = content.slice(prefix.length)
+  }
+
+  if (trailingMatch) {
+    suffix = trailingMatch[1]!
+    content = content.slice(0, -suffix.length)
+  }
+
+  return `${prefix}${startControl}${content}${PDI}${suffix}`
 }
 
 function wrapMarkdownRtl(text: string, mode: IsolationMode, options: NormalizedRtlOptions) {

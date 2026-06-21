@@ -143,6 +143,15 @@ test("groups consecutive paragraph lines into a single bidi isolation block", ()
   assert.ok(lines[1].endsWith("\u2069"))
 })
 
+test("comprehensively isolates markdown formatting markers (bold, italic, strikethrough)", () => {
+  const options = normalizeOptions({ isolateAssistantText: "auto" })
+  assert.equal(formatRtlText("**سلام**", "auto", options), "**\u2067سلام\u2069**")
+  assert.equal(formatRtlText("*سلام*", "auto", options), "*\u2067سلام\u2069*")
+  assert.equal(formatRtlText("_سلام_", "auto", options), "_\u2067سلام\u2069_")
+  assert.equal(formatRtlText("~~سلام~~", "auto", options), "~~\u2067سلام\u2069~~")
+  assert.equal(formatRtlText("***سلام***", "auto", options), "***\u2067سلام\u2069***")
+})
+
 test("converts digits only when requested", () => {
   const options = normalizeOptions({ digitMode: "eastern-arabic" })
   const output = formatRtlText("\u0634\u0645\u0627\u0631\u0647 123", "auto", options)
