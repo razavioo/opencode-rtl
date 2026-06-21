@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "opencode-rtl",
+  "version": "0.1.0",
+  "description": "Comprehensive RTL language support plugin for opencode.",
+  "type": "module",
+  "license": "MIT",
+  "main": "./dist/server.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./server": "./dist/server.js",
+    "./tui": "./dist/tui.js"
+  },
+  "files": [
+    "dist",
+    "src",
+    "examples",
+    "README.md"
+  ],
+  "engines": {
+    "opencode": ">=1.17.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test test/*.test.js"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "rtl",
+    "bidi",
+    "arabic",
+    "persian",
+    "hebrew",
+    "urdu"
+  ],
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.17.8",
+    "@types/node": "^22.15.3",
+    "typescript": "^5.8.3"
+  }
+}

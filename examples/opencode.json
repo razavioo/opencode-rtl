@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    [
+      "opencode-rtl",
+      {
+        "language": "auto",
+        "systemGuidance": true,
+        "isolateUserMessages": "auto",
+        "isolateAssistantText": "auto",
+        "isolateToolOutput": "off",
+        "minRtlRatio": 0.2,
+        "minRtlCharacters": 2,
+        "digitMode": "preserve",
+        "forceDirection": "auto",
+        "alignRtlParagraphs": false,
+        "rtlWrapColumn": 96,
+        "rtlAlignColumn": 96,
+        "wrapRtlMarkdown": "auto",
+        "notifyOnStart": false
+      }
+    ]
+  ]
+}
