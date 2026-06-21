@@ -397,8 +397,9 @@ function formatMarkdownTableRow(line: string, options: NormalizedRtlOptions) {
     const trailingCell = cell.match(/\s*$/u)?.[0] ?? ""
     const content = cell.trim()
     if (!content) return cell
-    if (analyzeDirection(content, options).direction !== "rtl") return cell
-    return `${leadingCell}${isolate(isolateInlineCode(content), "rtl")}${trailingCell}`
+    const cellDir = analyzeDirection(content, options).direction
+    const direction = cellDir === "rtl" ? "rtl" : "ltr"
+    return `${leadingCell}${isolate(isolateInlineCode(content), direction)}${trailingCell}`
   })
 
   return `${leading}|${formatted.join("|")}|`

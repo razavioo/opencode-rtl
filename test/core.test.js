@@ -114,9 +114,9 @@ test("keeps tables and code fences structurally left-to-right", () => {
 
   assert.match(output, /<div dir="rtl">\s*\u2067\u067e\u0627\u0631\u0627\u06af\u0631\u0627\u0641/)
   assert.match(output, /```bash\nnpm install\nnpm run dev\n```/)
-  assert.match(output, /^\| \u2067\u0639\u0646\u0648\u0627\u0646\u2069 \| Value \|$/m)
+  assert.match(output, /^\| \u2067\u0639\u0646\u0648\u0627\u0646\u2069 \| \u2066Value\u2069 \|$/m)
   assert.match(output, /^\| --- \| --- \|$/m)
-  assert.match(output, /^\| RTL \| \u2067\u0645\u062a\u0646 \u0641\u0627\u0631\u0633\u06cc\u2069 \|$/m)
+  assert.match(output, /^\| \u2066RTL\u2069 \| \u2067\u0645\u062a\u0646 \u0641\u0627\u0631\u0633\u06cc\u2069 \|$/m)
   assert.match(output, /^\| English \| English content \|$/m)
 })
 
