@@ -166,31 +166,124 @@ export function formatRtlText(text: string, mode: IsolationMode, options: Normal
     return wrapMarkdownRtl(text, mode, options)
   }
 
+  const linesWithNewlines = text.split(/(\r?\n)/)
+  const lines: string[] = []
+  const newlines: string[] = []
+
+  for (let i = 0; i < linesWithNewlines.length; i += 2) {
+    lines.push(linesWithNewlines[i] ?? "")
+    newlines.push(linesWithNewlines[i + 1] ?? "")
+  }
+
+  const formattedLines = new Array<string>(lines.length)
   let inFence = false
-  const parts = text.split(/(\r?\n)/)
 
-  return parts
-    .map((part) => {
-      if (part === "\n" || part === "\r\n") return part
-      const trimmed = part.trimStart()
-      const fence = trimmed.startsWith("```") || trimmed.startsWith("~~~")
-      if (fence) {
-        inFence = !inFence
-        return part
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]!
+    const trimmed = line.trimStart()
+    const isFence = trimmed.startsWith("```") || trimmed.startsWith("~~~")
+
+    if (isFence) {
+      inFence = !inFence
+      formattedLines[i] = line
+      i++
+      continue
+    }
+
+    if (inFence || isIndentedCode(line)) {
+      formattedLines[i] = line
+      i++
+      continue
+    }
+
+    if (!line.trim()) {
+      formattedLines[i] = line
+      i++
+      continue
+    }
+
+    const lineType = getLineType(line)
+
+    if (lineType === "paragraph" && !options.alignRtlParagraphs) {
+      let j = i
+      const paragraphLines: string[] = []
+      while (
+        j < lines.length &&
+        !isLineFence(lines[j]!) &&
+        !isIndentedCode(lines[j]!) &&
+        lines[j]!.trim() &&
+        getLineType(lines[j]!) === "paragraph"
+      ) {
+        paragraphLines.push(lines[j]!)
+        j++
       }
-      if (inFence || isIndentedCode(part)) return part
 
-      const withDigits = applyDigitMode(part, options.digitMode)
-      if (mode === "off") return withDigits
-      if (isAlreadyIsolated(withDigits)) return withDigits
+      const paragraphText = paragraphLines.join("\n")
+      const withDigits = applyDigitMode(paragraphText, options.digitMode)
 
-      const analysis = analyzeDirection(withDigits, options)
-      const forcedDirection = options.forceDirection === "auto" ? undefined : options.forceDirection
-      if (mode === "auto" && !forcedDirection && analysis.direction !== "rtl") return withDigits
+      if (mode === "off") {
+        const splitFormatted = withDigits.split("\n")
+        for (let k = 0; k < paragraphLines.length; k++) {
+          formattedLines[i + k] = splitFormatted[k] ?? ""
+        }
+      } else {
+        const analysis = analyzeDirection(withDigits, options)
+        const forcedDirection = options.forceDirection === "auto" ? undefined : options.forceDirection
+        const direction = forcedDirection ?? (analysis.direction === "rtl" ? "rtl" : "ltr")
 
-      return formatMarkdownLine(withDigits, forcedDirection ?? (analysis.direction === "rtl" ? "rtl" : "ltr"), options)
-    })
-    .join("")
+        if (mode === "auto" && direction !== "rtl") {
+          const splitFormatted = withDigits.split("\n")
+          for (let k = 0; k < paragraphLines.length; k++) {
+            formattedLines[i + k] = splitFormatted[k] ?? ""
+          }
+        } else {
+          const isolatedText = isolate(isolateInlineCode(withDigits), direction)
+          const splitFormatted = isolatedText.split("\n")
+          for (let k = 0; k < paragraphLines.length; k++) {
+            formattedLines[i + k] = splitFormatted[k] ?? ""
+          }
+        }
+      }
+      i = j
+    } else {
+      const withDigits = applyDigitMode(line, options.digitMode)
+      if (mode === "off") {
+        formattedLines[i] = withDigits
+      } else {
+        const analysis = analyzeDirection(withDigits, options)
+        const forcedDirection = options.forceDirection === "auto" ? undefined : options.forceDirection
+        const direction = forcedDirection ?? (analysis.direction === "rtl" ? "rtl" : "ltr")
+
+        if (mode === "auto" && direction !== "rtl") {
+          formattedLines[i] = withDigits
+        } else {
+          formattedLines[i] = formatMarkdownLine(withDigits, direction, options)
+        }
+      }
+      i++
+    }
+  }
+
+  let result = ""
+  for (let i = 0; i < lines.length; i++) {
+    result += (formattedLines[i] ?? "") + (newlines[i] ?? "")
+  }
+  return result
+}
+
+function getLineType(line: string): "heading" | "blockquote" | "list" | "table" | "paragraph" {
+  if (isMarkdownTableRow(line)) return "table"
+  const trimmed = line.trimStart()
+  if (/^#{1,6}\s/u.test(trimmed)) return "heading"
+  if (trimmed.startsWith(">")) return "blockquote"
+  if (/^(?:[-*+] |\d+\. )/u.test(trimmed)) return "list"
+  return "paragraph"
+}
+
+function isLineFence(line: string): boolean {
+  const trimmed = line.trimStart()
+  return trimmed.startsWith("```") || trimmed.startsWith("~~~")
 }
 
 export function stripDirectionalControls(text: string): string {
@@ -271,10 +364,11 @@ function formatMarkdownLine(line: string, direction: "rtl" | "ltr", options: Nor
 
   const { marker, content } = splitMarkdownLine(line)
   if (!content.trim()) return line
+  const formattedContent = direction === "rtl" ? isolateInlineCode(content) : content
   if (direction === "rtl" && options.alignRtlParagraphs) {
-    return alignRtlContent(marker, content, options)
+    return alignRtlContent(marker, formattedContent, options)
   }
-  return `${marker}${isolate(content, direction)}`
+  return `${marker}${isolate(formattedContent, direction)}`
 }
 
 function splitMarkdownLine(line: string) {
@@ -304,10 +398,19 @@ function formatMarkdownTableRow(line: string, options: NormalizedRtlOptions) {
     const content = cell.trim()
     if (!content) return cell
     if (analyzeDirection(content, options).direction !== "rtl") return cell
-    return `${leadingCell}${isolate(content, "rtl")}${trailingCell}`
+    return `${leadingCell}${isolate(isolateInlineCode(content), "rtl")}${trailingCell}`
   })
 
   return `${leading}|${formatted.join("|")}|`
+}
+
+function isolateInlineCode(text: string): string {
+  return text.replace(/(`+)(.+?)\1/g, (match, backticks, content) => {
+    if (content.startsWith(LRI) && content.endsWith(PDI)) {
+      return match
+    }
+    return `${backticks}${LRI}${content}${PDI}${backticks}`
+  })
 }
 
 function alignRtlContent(marker: string, content: string, options: NormalizedRtlOptions) {
@@ -332,10 +435,16 @@ function wrapMarkdownRtl(text: string, mode: IsolationMode, options: NormalizedR
   return splitMarkdownBlocks(text)
     .map((block) => {
       if (block.kind !== "text") return block.value
-      const body = formatRtlTextWithoutMarkdownWrapper(block.value, mode, options)
-      if (options.wrapRtlMarkdown !== "always" && analyzeDirection(block.value, options).direction !== "rtl") return body
-      if (!canWrapMarkdownBlock(block.value)) return body
-      return `<p dir="rtl" align="right">${body.trim()}</p>${preserveTrailingBlankLines(body)}`
+      const subBlocks = block.value.split(/((?:\r?\n){2,})/)
+      return subBlocks
+        .map((subBlock, index) => {
+          if (index % 2 !== 0) return subBlock
+          if (!subBlock.trim()) return subBlock
+          const body = formatRtlTextWithoutMarkdownWrapper(subBlock, mode, options)
+          if (options.wrapRtlMarkdown !== "always" && analyzeDirection(subBlock, options).direction !== "rtl") return body
+          return `<div dir="rtl">\n\n${body.trim()}\n\n</div>`
+        })
+        .join("")
     })
     .join("")
 }
