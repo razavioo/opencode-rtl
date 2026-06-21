@@ -13,6 +13,7 @@ type MutableRecord = Record<string, unknown>
 
 export const server: Plugin = async ({ client }, options?: PluginOptions) => {
   const settings = normalizeOptions(options)
+  const modelInputSettings: NormalizedRtlOptions = { ...settings, wrapRtlMarkdown: "off" }
   await log(client, settings, "info", "initialized", { status: statusText(settings) })
 
   const hooks: Hooks = {
@@ -26,9 +27,9 @@ export const server: Plugin = async ({ client }, options?: PluginOptions) => {
       if (!settings.enabled || settings.isolateUserMessages === "off") return
 
       for (const part of output.parts) {
-        mutateTextFields(part, (value) => formatRtlText(value, settings.isolateUserMessages, settings))
+        mutateTextFields(part, (value) => formatRtlText(value, settings.isolateUserMessages, modelInputSettings))
       }
-      mutateTextFields(output.message as unknown, (value) => formatRtlText(value, settings.isolateUserMessages, settings))
+      mutateTextFields(output.message as unknown, (value) => formatRtlText(value, settings.isolateUserMessages, modelInputSettings))
     },
 
     "experimental.chat.messages.transform": async (_input, output) => {
@@ -37,7 +38,7 @@ export const server: Plugin = async ({ client }, options?: PluginOptions) => {
       for (const message of output.messages) {
         for (const part of message.parts) {
           if (message.info.role === "user") {
-            mutateTextFields(part, (value) => formatRtlText(value, settings.isolateUserMessages, settings))
+            mutateTextFields(part, (value) => formatRtlText(value, settings.isolateUserMessages, modelInputSettings))
           }
         }
       }
