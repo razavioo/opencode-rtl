@@ -69,7 +69,7 @@ To confirm opencode sees the project config, run this from the repository root:
 opencode debug config
 ```
 
-The output should contain `file:///home/razavioo/StudioProjects/opencode-rtl` in the `plugin` array.
+The output should contain `file:///path/to/opencode-rtl` in the `plugin` array.
 
 ## Options
 
@@ -147,7 +147,7 @@ Tune `rtlAlignColumn` to the visible message width in your terminal. If the padd
 
 If it looks like nothing changed:
 
-- Start opencode from this repository, or pass the project path explicitly: `opencode /home/razavioo/StudioProjects/opencode-rtl`.
+- Start opencode from this repository, or pass the project path explicitly: `opencode /path/to/opencode-rtl`.
 - Confirm project config is loaded with `opencode debug config`; do not share the full output because it can include provider API keys.
 - Look for the `RTL support loaded` toast on startup when `notifyOnStart` or `debug` is enabled.
 - If automatic detection is too subtle, set `forceDirection` to `"rtl"` and `isolateAssistantText` to `"always"` in `opencode.json`.
