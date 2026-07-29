@@ -247,21 +247,45 @@ export function formatRtlText(text: string, mode: IsolationMode, options: Normal
       }
       i = j
     } else {
-      const withDigits = applyDigitMode(line, options.digitMode)
-      if (mode === "off") {
-        formattedLines[i] = withDigits
-      } else {
-        const analysis = analyzeDirection(withDigits, options)
-        const forcedDirection = options.forceDirection === "auto" ? undefined : options.forceDirection
-        const direction = forcedDirection ?? (analysis.direction === "rtl" ? "rtl" : "ltr")
+      if (lineType === "table") {
+        let j = i
+        const tableLineIndices: number[] = []
+        const tableLines: string[] = []
+        while (j < lines.length && isMarkdownTableRow(lines[j]!)) {
+          tableLineIndices.push(j)
+          tableLines.push(lines[j]!)
+          j++
+        }
 
-        if (mode === "auto" && direction !== "rtl") {
+        const columnDirs = computeColumnDirections(tableLines, options)
+
+        for (let k = 0; k < tableLineIndices.length; k++) {
+          const idx = tableLineIndices[k]!
+          const withDigits = applyDigitMode(lines[idx]!, options.digitMode)
+          if (mode === "off") {
+            formattedLines[idx] = withDigits
+          } else {
+            formattedLines[idx] = formatMarkdownLine(withDigits, "rtl", options, columnDirs)
+          }
+        }
+        i = j
+      } else {
+        const withDigits = applyDigitMode(line, options.digitMode)
+        if (mode === "off") {
           formattedLines[i] = withDigits
         } else {
-          formattedLines[i] = formatMarkdownLine(withDigits, direction, options)
+          const analysis = analyzeDirection(withDigits, options)
+          const forcedDirection = options.forceDirection === "auto" ? undefined : options.forceDirection
+          const direction = forcedDirection ?? (analysis.direction === "rtl" ? "rtl" : "ltr")
+
+          if (mode === "auto" && direction !== "rtl") {
+            formattedLines[i] = withDigits
+          } else {
+            formattedLines[i] = formatMarkdownLine(withDigits, direction, options)
+          }
         }
+        i++
       }
-      i++
     }
   }
 
@@ -359,8 +383,8 @@ export function isRtlLanguage(language: LanguageOption): language is RtlLanguage
   return RTL_LANGUAGES.includes(language as RtlLanguage)
 }
 
-function formatMarkdownLine(line: string, direction: "rtl" | "ltr", options: NormalizedRtlOptions) {
-  if (isMarkdownTableRow(line)) return formatMarkdownTableRow(line, options)
+function formatMarkdownLine(line: string, direction: "rtl" | "ltr", options: NormalizedRtlOptions, columnDirections?: ("rtl" | "ltr")[]) {
+  if (isMarkdownTableRow(line)) return formatMarkdownTableRow(line, options, columnDirections)
 
   const { marker, content } = splitMarkdownLine(line)
   if (!content.trim()) return line
@@ -387,22 +411,55 @@ function isMarkdownTableSeparatorCell(cell: string) {
   return /^\s*:?-{3,}:?\s*$/u.test(cell)
 }
 
-function formatMarkdownTableRow(line: string, options: NormalizedRtlOptions) {
+function formatMarkdownTableRow(line: string, options: NormalizedRtlOptions, columnDirections?: ("rtl" | "ltr")[]) {
   const leading = line.match(/^\s*/u)?.[0] ?? ""
   const trimmed = line.trim()
   const cells = trimmed.slice(1, -1).split("|")
-  const formatted = cells.map((cell) => {
+  const formatted = cells.map((cell, colIndex) => {
     if (isMarkdownTableSeparatorCell(cell)) return cell
     const leadingCell = cell.match(/^\s*/u)?.[0] ?? ""
     const trailingCell = cell.match(/\s*$/u)?.[0] ?? ""
     const content = cell.trim()
     if (!content) return cell
-    const cellDir = analyzeDirection(content, options).direction
-    const direction = cellDir === "rtl" ? "rtl" : "ltr"
+    const direction = columnDirections?.[colIndex] ?? (analyzeDirection(content, options).direction === "rtl" ? "rtl" : "ltr")
     return `${leadingCell}${isolate(isolateInlineCode(content), direction)}${trailingCell}`
   })
 
   return `${leading}|${formatted.join("|")}|`
+}
+
+function parseTableCells(line: string): string[] {
+  const trimmed = line.trim()
+  return trimmed.slice(1, -1).split("|")
+}
+
+function computeColumnDirections(tableLines: string[], options: NormalizedRtlOptions): ("rtl" | "ltr")[] {
+  const allCells: string[][] = []
+  for (const line of tableLines) {
+    const cells = parseTableCells(line)
+    if (cells.every((c) => isMarkdownTableSeparatorCell(c))) continue
+    allCells.push(cells)
+  }
+
+  if (!allCells.length) return []
+
+  const columnCount = Math.max(...allCells.map((row) => row.length))
+  const directions: ("rtl" | "ltr")[] = []
+
+  for (let col = 0; col < columnCount; col++) {
+    let rtlCount = 0
+    let ltrCount = 0
+    for (const row of allCells) {
+      const content = (row[col] ?? "").trim()
+      if (!content) continue
+      const dir = analyzeDirection(content, options).direction
+      if (dir === "rtl") rtlCount++
+      else if (dir === "ltr") ltrCount++
+    }
+    directions.push(rtlCount >= ltrCount && rtlCount > 0 ? "rtl" : "ltr")
+  }
+
+  return directions
 }
 
 function isolateInlineCode(text: string): string {

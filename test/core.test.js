@@ -114,10 +114,10 @@ test("keeps tables and code fences structurally left-to-right", () => {
 
   assert.match(output, /<div dir="rtl" align="right">\s*\u2067\u067e\u0627\u0631\u0627\u06af\u0631\u0627\u0641/)
   assert.match(output, /```bash\nnpm install\nnpm run dev\n```/)
-  assert.match(output, /^\| \u2067\u0639\u0646\u0648\u0627\u0646\u2069 \| \u2066Value\u2069 \|$/m)
+  assert.match(output, /^\| \u2066\u0639\u0646\u0648\u0627\u0646\u2069 \| \u2066Value\u2069 \|$/m)
   assert.match(output, /^\| --- \| --- \|$/m)
-  assert.match(output, /^\| \u2066RTL\u2069 \| \u2067\u0645\u062a\u0646 \u0641\u0627\u0631\u0633\u06cc\u2069 \|$/m)
-  assert.match(output, /^\| English \| English content \|$/m)
+  assert.match(output, /^\| \u2066RTL\u2069 \| \u2066\u0645\u062a\u0646 \u0641\u0627\u0631\u0633\u06cc\u2069 \|$/m)
+  assert.match(output, /^\| \u2066English\u2069 \| \u2066English content\u2069 \|$/m)
 })
 
 test("isolates inline code spans within RTL lines", () => {
@@ -166,4 +166,37 @@ test("creates system guidance", () => {
   const prompt = systemPrompt(normalizeOptions({ language: "fa" }))
   assert.ok(prompt?.includes("Persian"))
   assert.ok(prompt?.includes("code blocks"))
+})
+
+test("uses column-level direction when majority of cells in a column are RTL", () => {
+  const options = normalizeOptions({ isolateAssistantText: "auto" })
+  const input = [
+    "| \u0648\u0636\u0639\u06cc\u062a | \u06a9\u0627\u0631 |",
+    "| --- | --- |",
+    "| \u062a\u0645\u0627\u0645 | \u06a9\u0627\u0645\u0646\u062a \u0631\u0648\u06cc issue\u0647\u0627 |",
+    "| \u062a\u0645\u0627\u0645 | \u0633\u0627\u062e\u062a\u0646 feature request |",
+    "| \u062a\u0645\u0627\u0645 | \u0627\u0635\u0644\u0627\u062d compliance |",
+  ].join("\n")
+  const output = formatRtlText(input, "auto", options)
+
+  assert.match(output, /^\| \u2067\u0648\u0636\u0639\u06cc\u062a\u2069 \| \u2067\u06a9\u0627\u0631\u2069 \|$/m)
+  assert.match(output, /^\| --- \| --- \|$/m)
+  assert.match(output, /^\| \u2067\u062a\u0645\u0627\u0645\u2069 \| \u2067\u06a9\u0627\u0645\u0646\u062a \u0631\u0648\u06cc issue\u0647\u0627\u2069 \|$/m)
+  assert.match(output, /^\| \u2067\u062a\u0645\u0627\u0645\u2069 \| \u2067\u0633\u0627\u062e\u062a\u0646 feature request\u2069 \|$/m)
+  assert.match(output, /^\| \u2067\u062a\u0645\u0627\u0645\u2069 \| \u2067\u0627\u0635\u0644\u0627\u062d compliance\u2069 \|$/m)
+})
+
+test("column direction defaults to LTR when no RTL majority", () => {
+  const options = normalizeOptions({ isolateAssistantText: "auto" })
+  const input = [
+    "| Name | Value |",
+    "| --- | --- |",
+    "| alpha | beta |",
+    "| gamma | \u0645\u062a\u0646 |",
+  ].join("\n")
+  const output = formatRtlText(input, "auto", options)
+
+  assert.match(output, /^\| \u2066Name\u2069 \| \u2066Value\u2069 \|$/m)
+  assert.match(output, /^\| \u2066alpha\u2069 \| \u2066beta\u2069 \|$/m)
+  assert.match(output, /^\| \u2066gamma\u2069 \| \u2066\u0645\u062a\u0646\u2069 \|$/m)
 })
