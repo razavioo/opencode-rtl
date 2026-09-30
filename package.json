@@ -29,7 +29,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test test/*.test.js"
+    "test": "npm run build && node --test test/*.test.js",
+    "release:stage": "npm test && npm stage publish"
   },
   "keywords": [
     "opencode",

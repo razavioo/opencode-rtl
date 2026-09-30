@@ -19,7 +19,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
 
       - run: npm ci
 
@@ -28,5 +27,3 @@ jobs:
       - run: npm test
 
       - run: npm stage publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ''
